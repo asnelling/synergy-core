@@ -1,10 +1,11 @@
 name: Windows
 
-on:
-  push:
-    branches: [ master ]
-  pull_request:
-    branches: [ master ]
+# on:
+#   push:
+#     branches: [ master ]
+#   pull_request:
+#     branches: [ master ]
+on: workflow_dispatch
 
 jobs:
   build-arch64:
