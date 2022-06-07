@@ -7,6 +7,8 @@ on:
 
 jobs:
   create-deb:
+    container:
+      image: asnell/synergy-builder
     runs-on: ubuntu-latest
     env:
       GIT_COMMIT: ${{ github.sha }}
@@ -14,33 +16,6 @@ jobs:
       - uses: actions/checkout@v3
         with:
           fetch-depth: 0
-      
-      - name: Install build dependencies
-        run: |
-          sudo apt update
-          sudo apt install --yes \
-            qtcreator \
-            qtbase5-dev \
-            qttools5-dev \
-            cmake \
-            make \
-            g++ \
-            xorg-dev \
-            libssl-dev \
-            libx11-dev \
-            libsodium-dev \
-            libgl1-mesa-glx \
-            libegl1-mesa \
-            libcurl4-openssl-dev \
-            libavahi-compat-libdnssd-dev \
-            qtdeclarative5-dev \
-            libqt5svg5-dev \
-            libsystemd-dev \
-            libnotify-dev \
-            libgdk-pixbuf2.0-dev \
-            libglib2.0-dev \
-            debhelper \
-            devscripts
       
       - name: 'Update Version.cmake'
         run: python3 ./CI/build_version.py
