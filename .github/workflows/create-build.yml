@@ -22,12 +22,14 @@ jobs:
 
       - name: 'Build Enterprise (deb)'
         run: |
+          echo -e "override_dh_auto_configure:\n\tdh_auto_configure -- -DCMAKE_BUILD_TYPE=Release" >> debian/rules
           mkdir build-ent
           cd build-ent
           cmake -DCMAKE_BUILD_TYPE=Release -DSYNERGY_ENTERPRISE=ON ..
           source ./version
+          cd ..
+          rm -rf build-ent
           env | grep SYNERGY_VERSION >> $GITHUB_ENV
-          make
         env:
           SYNERGY_ENTERPRISE: 1
       
