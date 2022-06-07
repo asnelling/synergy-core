@@ -60,7 +60,7 @@ jobs:
           cd build-ent
           cmake -DCMAKE_BUILD_TYPE=Release -DSYNERGY_ENTERPRISE=ON ..
           source ./version
-          sed 's/^export //' ./version >> $GITHUB_ENV
+          env | grep SYNERGY_VERSION >> $GITHUB_ENV
           make
         env:
           SYNERGY_ENTERPRISE: 1
