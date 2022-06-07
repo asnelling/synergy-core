@@ -1,41 +1,70 @@
-name: Create Build
+name: Create deb package
 
 on:
   push:
-    branches: [ master ]
+    tags:
+      - v[0-9]+.[0-9]+*
 
 jobs:
-  create-release:
+  create-deb:
     runs-on: ubuntu-latest
+    env:
+      GIT_COMMIT: ${{ github.sha }}
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
         with:
           fetch-depth: 0
 
       - name: 'Install git core'
-        run: |
-          npm install @actions/core
-          npm install @octokit/core
+        run: npm install @actions/core @octokit/core
 
       - name: 'Generate next build number'
-        id: build
+        id: buildnum
         uses: "./.github/actions/build-number"
+      
+      - name: 'Update Version.cmake'
+        run: python3 ./CI/build_version.py
 
-      - name: Create Release
-        id: create_release
-        uses: actions/create-release@v1
+      - name: 'Build Enterprise (deb)'
+        run: |
+          mkdir build-ent
+          cd build-ent
+          cmake -DCMAKE_BUILD_TYPE=Release -DSYNERGY_ENTERPRISE=ON ..
+          source ./version
+          sed 's/^export //' ./version >> $GITHUB_ENV
+          make
         env:
-          GITHUB_TOKEN: ${{ secrets.RELEASE_EVENT_PROPAGATION_TOKEN }}
+          SYNERGY_ENTERPRISE: 1
+      
+      - name: 'Setup variables'
+        run: |
+          echo SYNERGY_VERSION="$SYNERGY_VERSION_MAJOR.$SYNERGY_VERSION_MINOR.$SYNERGY_VERSION_PATCH" >> $GITHUB_ENV
+          echo SYNERGY_REVISION=`git rev-parse --short=8 HEAD` >> $GITHUB_ENV
+          echo SYNERGY_DEB_VERSION="${SYNERGY_VERSION}.${SYNERGY_VERSION_STAGE}.${SYNERGY_REVISION}" >> $GITHUB_ENV
+          echo SYNERGY_RPM_VERSION="${SYNERGY_VERSION}-${SYNERGY_VERSION_STAGE}.${SYNERGY_REVISION}" >> $GITHUB_ENV
+      
+      - name: 'Package Enterprise binary deb'
+        run: |
+          python3 ./CI/deb_changelog.py synergy "${SYNERGY_DEB_VERSION}"
+          export GPG_TTY=$(tty)
+          debuild --preserve-envvar SYNERGY_* --preserve-envvar GIT_COMMIT -us -uc
+          mkdir enterprise_package
+          filename=$(ls ../synergy_*.deb)
+          distro_name=$(lsb_release -sd | sed 's/\..*// ; s/ // ; y/U/u/')
+          filename_new="synergy-enterprise_${SYNERGY_VERSION}-${SYNERGY_VERSION_STAGE}.${SYNERGY_REVISION}_${distro_name}${filename##*${SYNERGY_REVISION}}"
+          mv $filename ./enterprise_package/$filename_new
+          cd enterprise_package
+          md5sum $filename_new >> ${filename_new}.checksum.txt
+          sha1sum $filename_new >> ${filename_new}.checksum.txt
+          sha256sum $filename_new >> ${filename_new}.checksum.txt
+          ls -la
+        env:
+          SYNERGY_ENTERPRISE: 1
+      
+      - name: Create release
+        uses: softprops/action-gh-release@v1
+        if: startsWith(github.ref, 'refs/tags/')
         with:
-          tag_name: ${{ steps.build.outputs.next-build }}
-          release_name: ${{ steps.build.outputs.next-build }}
-          commitish: master
-          draft: false
-          prerelease: true
-
-      - name: Run build on Azure
-        uses: Azure/pipelines@v1
-        with:
-          azure-devops-project-url: 'https://dev.azure.com/symless/synergy-core'
-          azure-pipeline-name: 'symless.synergy-core'
-          azure-devops-token: '${{ secrets.AZURE_DEVOPS_TOKEN }}'
+          name: Release ${{ steps.buildnum.outputs.next-build }}
+          body_path: debian/changelog
+          files: enterprise_package/*
