@@ -38,7 +38,9 @@ jobs:
             libsystemd-dev \
             libnotify-dev \
             libgdk-pixbuf2.0-dev \
-            libglib2.0-dev
+            libglib2.0-dev \
+            debhelper \
+            devscripts
       
       - uses: actions/setup-node@v3
         with:
