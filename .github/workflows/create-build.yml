@@ -96,7 +96,7 @@ jobs:
           path: debian/changelog
 
   create-dmg:
-    runs-on: mac-latest
+    runs-on: macos-latest
     env:
       GIT_COMMIT: ${{ github.sha }}
       Qt5_DIR: /usr/local/opt/qt@5
