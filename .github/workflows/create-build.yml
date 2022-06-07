@@ -17,6 +17,9 @@ jobs:
         with:
           fetch-depth: 0
       
+      - name: checkout git safe directory fix
+        run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
+      
       - name: 'Update Version.cmake'
         run: python3 ./CI/build_version.py
 
